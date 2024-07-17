@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+
+const BASE_URL = 'http://192.168.0.108:8080';
+const apiKey = "thecodeart-api-key";
 
 const RestaurantScreen = () => {
   const [restaurants, setRestaurants] = useState([]);
@@ -9,52 +13,77 @@ const RestaurantScreen = () => {
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    // Load restaurants from storage when the component mounts
-    loadRestaurants();
+    fetchRestaurants();
   }, []);
 
-  const loadRestaurants = async () => {
+  const getUserToken = async () => {
+    const userToken = await AsyncStorage.getItem('userToken');
+    if (!userToken) {
+      throw new Error('User token not found.');
+    }
+    return userToken;
+  };
+
+  const makeApiRequest = async (method, url, data = null) => {
     try {
-      const storedRestaurants = await AsyncStorage.getItem('restaurants');
-      if (storedRestaurants) {
-        setRestaurants(JSON.parse(storedRestaurants));
+      const userToken = await getUserToken();
+      const config = {
+        method,
+        url: `${BASE_URL}${url}`,
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+      };
+      if (data) {
+        config.data = data;
       }
+      const response = await axios(config);
+      return response.data;
     } catch (error) {
-      console.error('Error loading restaurants:', error);
+      console.error(`Error making API request: ${error}`);
+      throw error;
     }
   };
 
-  const saveRestaurants = async (updatedRestaurants) => {
+  const fetchRestaurants = async () => {
     try {
-      await AsyncStorage.setItem('restaurants', JSON.stringify(updatedRestaurants));
+      const data = await makeApiRequest('get', '/api/getAll');
+      setRestaurants(data);
     } catch (error) {
-      console.error('Error saving restaurants:', error);
+      console.error('Error fetching restaurants:', error);
+      Alert.alert('Error', 'Failed to load restaurants.');
     }
   };
 
-  const addRestaurant = () => {
+  const addRestaurant = async () => {
     if (!name || !location) {
       Alert.alert('Error', 'Please enter both name and location');
       return;
     }
 
-    const newRestaurant = {
-      id: Math.random().toString(),
-      name,
-      location,
-    };
-
-    const updatedRestaurants = [...restaurants, newRestaurant];
-    setRestaurants(updatedRestaurants);
-    saveRestaurants(updatedRestaurants);
-    setName('');
-    setLocation('');
+    try {
+      const newRestaurant = await makeApiRequest('post', '/api/post', { name, location });
+      setRestaurants((prevRestaurants) => [...prevRestaurants, newRestaurant]);
+      setName('');
+      setLocation('');
+    } catch (error) {
+      console.error('Error adding restaurant:', error);
+      Alert.alert('Error', 'Failed to add restaurant.');
+    }
   };
 
-  const deleteRestaurant = (id) => {
-    const updatedRestaurants = restaurants.filter((restaurant) => restaurant.id !== id);
-    setRestaurants(updatedRestaurants);
-    saveRestaurants(updatedRestaurants);
+  const deleteRestaurant = async (id) => {
+    try {
+      await makeApiRequest('delete', `/api/delete/${id}`);
+      setRestaurants((prevRestaurants) =>
+        prevRestaurants.filter((restaurant) => restaurant.id !== id)
+      );
+    } catch (error) {
+      console.error('Error deleting restaurant:', error);
+      Alert.alert('Error', 'Failed to delete restaurant.');
+    }
   };
 
   const startEditing = (restaurant) => {
@@ -63,23 +92,29 @@ const RestaurantScreen = () => {
     setLocation(restaurant.location);
   };
 
-  const updateRestaurant = () => {
+  const updateRestaurant = async () => {
     if (!name || !location) {
       Alert.alert('Error', 'Please enter both name and location');
       return;
     }
 
-    const updatedRestaurants = restaurants.map((restaurant) =>
-      restaurant.id === editingId
-        ? { id: restaurant.id, name, location }
-        : restaurant
-    );
-
-    setRestaurants(updatedRestaurants);
-    saveRestaurants(updatedRestaurants);
-    setEditingId(null);
-    setName('');
-    setLocation('');
+    try {
+      const updatedRestaurant = await makeApiRequest('put', `/api/update/${editingId}`, {
+        name,
+        location,
+      });
+      setRestaurants((prevRestaurants) =>
+        prevRestaurants.map((restaurant) =>
+          restaurant.id === editingId ? updatedRestaurant : restaurant
+        )
+      );
+      setEditingId(null);
+      setName('');
+      setLocation('');
+    } catch (error) {
+      console.error('Error updating restaurant:', error);
+      Alert.alert('Error', 'Failed to update restaurant.');
+    }
   };
 
   const cancelEditing = () => {
@@ -95,13 +130,13 @@ const RestaurantScreen = () => {
         style={styles.input}
         placeholder="Name"
         value={name}
-        onChangeText={setName}
+        onChangeText={(text) => setName(text.toLowerCase())}
       />
       <TextInput
         style={styles.input}
         placeholder="Location"
         value={location}
-        onChangeText={setLocation}
+        onChangeText={(text) => setLocation(text.toLowerCase())}
       />
       {editingId ? (
         <View style={styles.buttonContainer}>
@@ -111,12 +146,15 @@ const RestaurantScreen = () => {
       ) : (
         <Button title="Add Restaurant" onPress={addRestaurant} />
       )}
+      
       <FlatList
         data={restaurants}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View style={styles.restaurantItem}>
-            <Text style={styles.restaurantText}>{item.name} - {item.location}</Text>
+            <Text style={styles.restaurantText}>
+              {item.name} - {item.location}
+            </Text>
             <View style={styles.buttons}>
               <Button title="Edit" onPress={() => startEditing(item)} />
               <Button title="Delete" onPress={() => deleteRestaurant(item.id)} color="red" />
@@ -124,6 +162,7 @@ const RestaurantScreen = () => {
           </View>
         )}
       />
+      
     </View>
   );
 };

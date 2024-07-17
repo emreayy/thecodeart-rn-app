@@ -7,6 +7,10 @@ const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  const handleChangeText = (text) => {
+    setUsername(text.toLowerCase());
+  };
+
   const handleLogin = async () => {
     const loginData = {
       username: username,
@@ -23,7 +27,7 @@ const LoginScreen = ({ navigation }) => {
           } catch (e) {
             console.error('Error storing token:', e);
           }
-        
+        startBackgroundRefreshTimer();
         navigation.replace('Main');
       } else {
         Alert.alert('Login failed', 'Invalid credentials');
@@ -34,13 +38,44 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const startBackgroundRefreshTimer = () => {
+    const refreshInterval = 5 * 2 * 1000; // Interval in milliseconds (5 minutes)
+    
+    const refreshToken = async () => {
+      try {
+        const userToken = await AsyncStorage.getItem('userToken');
+        const response = await axios.post(
+          'http://192.168.0.108:8080/auth/refresh',
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${userToken}`,
+            },
+          }
+        );
+        const refreshedToken = response.data.access_token;
+        await AsyncStorage.setItem('userToken', refreshedToken);
+        console.log('Token refreshed in background:', refreshedToken);
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        Alert.alert('Error', 'Failed to refresh token.');
+      } finally {
+        // After refreshing, restart the timer
+        setTimeout(refreshToken, refreshInterval);
+      }
+    };
+  
+    // Start the initial token refresh timer
+    setTimeout(refreshToken, refreshInterval);
+  };
+  
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Username</Text>
       <TextInput 
         style={styles.input}
         value={username}
-        onChangeText={setUsername}
+        onChangeText={handleChangeText}
       />
       <Text style={styles.label}>Password</Text>
       <TextInput 

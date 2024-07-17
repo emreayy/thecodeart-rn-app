@@ -35,6 +35,8 @@ const ProfileScreen = () => {
         headers: loginData.headers,
         params: loginData.params,
       });
+
+      
   
       return response.data;
     } catch (error) {
