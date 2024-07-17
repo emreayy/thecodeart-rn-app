@@ -11,7 +11,11 @@ const Tab = createMaterialTopTabNavigator();
 
 function MainTabs() {
   return (
-    <Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={{
+        tabBarLabel: () => null,
+      }}
+    >
       <Tab.Screen name="Restaurant" component={RestaurantScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>

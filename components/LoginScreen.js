@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
@@ -13,12 +14,16 @@ const LoginScreen = ({ navigation }) => {
     };
 
     try {
-      const response = await axios.post('http://192.168.0.102:8081/auth/login', loginData);
-
-      console.log('Response:', response);
-
-      if (response.data) {
-        //AsyncStorage.setItem('token', "response.data.access_token");
+      const response = await axios.post('http://192.168.0.108:8080/auth/login', loginData);
+      if (response?.data?.access_token) {
+        
+          try {
+            await AsyncStorage.setItem('userToken', response.data.access_token);
+            await AsyncStorage.setItem('userName', loginData.username);
+          } catch (e) {
+            console.error('Error storing token:', e);
+          }
+        
         navigation.replace('Main');
       } else {
         Alert.alert('Login failed', 'Invalid credentials');

@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { DrawerActions } from '@react-navigation/native';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const [user, setUser] = useState(null);
@@ -16,27 +18,29 @@ const ProfileScreen = () => {
   }, []);
 
   const fetchUserData = async () => {
-    // Simulating backend response
-    return {
-      "id": 1,
-      "username": "user",
-      "firstName": "TheCode",
-      "lastName": "Art",
-      "email": "user@example.com",
-      "phoneNumber": "+1234567890",
-      "enabled": true,
-      "lastPasswordResetDate": "2024-07-02T04:58:58.508+00:00",
-      "authorities": [
-          {
-              "authority": "ROLE_USER"
-          }
-      ]
-    };
-  };
-
-  const openDrawer = () => {
-    // Function to open drawer
-    DrawerActions.openDrawer();
+    try {
+      const userName = await AsyncStorage.getItem('userName');
+      const userToken = await AsyncStorage.getItem('userToken');
+  
+      const loginData = {
+        params: {
+          username: userName,
+        },
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
+      };
+  
+      const response = await axios.get('http://192.168.0.108:8080/api/whoami', {
+        headers: loginData.headers,
+        params: loginData.params,
+      });
+  
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      throw error;
+    }
   };
 
   if (loading) {
@@ -66,14 +70,14 @@ const ProfileScreen = () => {
         <MapView
           style={styles.map}
           initialRegion={{
-            latitude: 37.78825,
-            longitude: -122.4324,
+            latitude: 42.4416,
+            longitude: 19.2662,
             latitudeDelta: 0.0922,
             longitudeDelta: 0.0421,
           }}
         >
           <Marker
-            coordinate={{ latitude: 37.78825, longitude: -122.4324 }}
+            coordinate={{ latitude: 42.4416, longitude: 19.2662 }}
             title="Marker Title"
             description="Marker Description"
           />
