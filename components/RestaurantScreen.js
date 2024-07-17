@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, FlatList, StyleSheet, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
@@ -11,6 +12,7 @@ const RestaurantScreen = () => {
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [editingId, setEditingId] = useState(null);
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchRestaurants();
@@ -43,7 +45,13 @@ const RestaurantScreen = () => {
       return response.data;
     } catch (error) {
       console.error(`Error making API request: ${error}`);
-      throw error;
+      if (error.response && error.response.status === 401) {
+        await AsyncStorage.removeItem('userToken');
+        navigation.replace('Login');
+        Alert.alert('Session Expired', 'Your session has expired. Please log in again.');
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -146,7 +154,7 @@ const RestaurantScreen = () => {
       ) : (
         <Button title="Add Restaurant" onPress={addRestaurant} />
       )}
-      
+
       <FlatList
         data={restaurants}
         keyExtractor={(item) => item.id.toString()}
@@ -162,7 +170,7 @@ const RestaurantScreen = () => {
           </View>
         )}
       />
-      
+
     </View>
   );
 };

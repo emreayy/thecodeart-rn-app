@@ -39,7 +39,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const startBackgroundRefreshTimer = () => {
-    const refreshInterval = 5 * 2 * 1000; // Interval in milliseconds (5 minutes)
+    const refreshInterval = 5 * 58 * 1000; // Interval in milliseconds (5 minutes)
     
     const refreshToken = async () => {
       try {

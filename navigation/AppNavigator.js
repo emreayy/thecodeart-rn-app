@@ -5,7 +5,6 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import LoginScreen from '../components/LoginScreen';
 import ProfileScreen from '../components/ProfileScreen';
 import RestaurantScreen from '../components/RestaurantScreen';
-import BackgroundRefresh from '../components/BackgroundRefresh';
 
 const Stack = createStackNavigator();
 const Tab = createMaterialTopTabNavigator();
